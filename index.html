@@ -111,7 +111,8 @@ body.splashdone .brand img.wig{animation:brandWig .5s ease-in-out both,brandFloa
 @keyframes fl{to{transform:translateY(-44px) scale(1.2);opacity:0}}
 .fx.p{width:10px;height:10px;background:var(--c);border-radius:2px;animation:pt .5s ease-out forwards}
 @keyframes pt{to{transform:translate(var(--dx),var(--dy)) rotate(240deg);opacity:0}}
-.over{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:18px;cursor:default}
+/* نافذة الترحيب ونهاية المرحلة: في منتصف المسافة بين شريط الوقت والحافة السفلية للشاشة */
+.over{position:fixed;left:0;right:0;top:var(--ot,0px);bottom:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));cursor:default}
 /* تعتيم الطاولة نفسها خلف البطاقة بدل مربع داكن يغطي مساحتها */
 .board::before{transition:filter .25s}
 .board:has(.over:not([hidden]))::before{filter:brightness(.55) drop-shadow(0 18px 14px rgba(0,0,0,.4))}
@@ -344,21 +345,26 @@ for(var i=0;i<9;i++){var b=i?tpl.cloneNode(true):tpl;b.setAttribute('aria-label'
 var NL=40,curL=1,LV=null,mode='ready',SAVE={u:1,b:{},p:{}},READY=$('oB').innerHTML;
 try{var sd=JSON.parse(localStorage.getItem('whack-levels'));if(sd&&sd.u>=1){SAVE.u=Math.min(NL,sd.u|0);SAVE.b=sd.b||{};SAVE.p=sd.p||{}}}catch(e){}
 function saveLv(){try{localStorage.setItem('whack-levels',JSON.stringify(SAVE))}catch(e){}}
-function lvl(n){var d=(n-1)/(NL-1);return{vis:1300-750*d,gap:900-560*d,pb:n<3?0:.05+.11*d,pf:n<2?0:.06+.14*d,goal:Math.round(15+(n-1)*4.5)}}
+/* سرعة كل مرحلة: 0.5 للمراحل 1-3، ثم 0.75 حتى 8، ثم 1 حتى 20، ثم 1.1 ثابتة حتى النهاية */
+function spdOf(n){return n<=3?.5:n<=8?.75:n<=20?1:1.1}
+function risk(n){var d=(n-1)/(NL-1);return{pb:n<2?0:.10+.08*d,pf:n<2?0:.06+.14*d}}
+/* الهدف يُحسب من عدد الأشرار المتوقع في 30 ثانية بسرعة المرحلة، ويكبر تدريجيًا ولا ينقص أبدًا من مرحلة لأخرى */
+var GOALS=[0];(function(){for(var n=1;n<=NL;n++){var d=(n-1)/(NL-1),k=risk(n),good=1-k.pb-k.pf,M=Math.floor(30000/(900/spdOf(n))*good),p=0;for(var j=1;j<=M;j++)p+=Math.min(4,1+Math.floor(j/4));p*=(good+.4)/good;GOALS[n]=Math.max(Math.round(p*(.25+.35*d)),GOALS[n-1]+1)}})();
+function lvl(n){var s=spdOf(n),k=risk(n);return{s:s,vis:1300/s,gap:900/s,pb:k.pb,pf:k.pf,goal:GOALS[n]}}
 function passed(n){return !!(SAVE.p&&SAVE.p[n])||(SAVE.b[n]||0)>=lvl(n).goal}
 var home=$('home'),hMain=$('hMain'),hLevels=$('hLevels'),lvGrid=$('lvGrid');
 function openHome(levels){if(run)return;H.forEach(hide);over.hidden=true;document.body.classList.add('athome');home.hidden=false;hMain.hidden=!!levels;hLevels.hidden=!levels;if(levels)renderLv()}
 function closeHome(){document.body.classList.remove('athome');home.hidden=true}
 function renderLv(){lvGrid.innerHTML='';var cur=null;for(var n=1;n<=NL;n++){var b=document.createElement('button'),lock=n>SAVE.u;b.className='lv'+(lock?' lock':'')+(n===SAVE.u&&!passed(n)?' cur':'');b.setAttribute('aria-label','المرحلة '+n+(lock?' مقفلة':''));
-if(lock){b.disabled=true;b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'}else{b.innerHTML='<span>'+n+'</span>'+(passed(n)?'<i class="ok">✓</i>':'');(function(k){b.onclick=function(){showReady(k)}})(n)}
+if(lock){b.disabled=true;b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'}else{b.innerHTML='<span>'+n+'</span>'+(passed(n)?'<i class="ok">✓</i>':'');(function(k){b.onclick=function(){showReady(k);go('play')}})(n)}
 if(n===SAVE.u)cur=b;lvGrid.appendChild(b)}if(cur)setTimeout(function(){cur.scrollIntoView({block:'center'})},30)}
-function showReady(n){curL=n;LV=lvl(n);mode='ready';$('oL').textContent='المرحلة '+n;$('oT').textContent='جاهز؟';$('oB').innerHTML=READY;$('start').textContent='ابدأ';$('start').hidden=false;$('wBtns').hidden=true;applyTime();$('score').textContent=0;cmb=0;setCombo();fill.style.transform='scaleX(1)';bar.classList.remove('low');over.hidden=false;closeHome()}
-$('hPlay').onclick=function(){var n=1;while(n<SAVE.u&&passed(n))n++;showReady(n)};
-$('hLv').onclick=function(){openHome(true)};
-$('lvBack').onclick=function(){openHome(false)};
-$('toLv').onclick=function(){openHome(true)};
+function showReady(n){curL=n;LV=lvl(n);mode='ready';$('oL').textContent='المرحلة '+n;$('oT').textContent='جاهز؟';$('oB').innerHTML=READY;$('start').textContent='ابدأ';$('start').hidden=false;$('wBtns').hidden=true;applyTime();$('score').textContent=0;cmb=0;setCombo();fill.style.transform='scaleX(1)';bar.classList.remove('low');over.hidden=false;closeHome();placeOver()}
+$('hPlay').onclick=function(){var n=1;while(n<SAVE.u&&passed(n))n++;showReady(n);go('play')};
+$('hLv').onclick=function(){go('levels')};
+$('lvBack').onclick=function(){back('')};
+$('toLv').onclick=function(){swap('levels')};
 $('wRe').onclick=function(){start()};
-$('wNext').onclick=function(){if(curL<NL)showReady(curL+1);else openHome(true)};
+$('wNext').onclick=function(){if(curL<NL)showReady(curL+1);else swap('levels')};
 function snd(f1,f2,d,ty,v){if(muted)return;try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();var o=ac.createOscillator(),g=ac.createGain(),n=ac.currentTime;o.type=ty||'triangle';o.frequency.setValueAtTime(f1,n);o.frequency.exponentialRampToValueAtTime(f2,n+d);g.gain.setValueAtTime(v||.15,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(ac.destination);o.start(n);o.stop(n+d)}catch(e){}}
 $('snd').onclick=function(){muted=!muted;this.textContent=muted?'🔇':'🔊'};
 document.addEventListener('pointermove',function(e){ham.style.transform='translate('+e.clientX+'px,'+e.clientY+'px)';ham.classList.toggle('vis',!!e.target.closest&&!!e.target.closest('#board')&&!over.contains(e.target)||e.pointerType==='touch'&&ham.classList.contains('vis'))});
@@ -387,8 +393,6 @@ else{cmb++;pts=(h.kind==='gold'?5:1)*mult();snd(h.kind==='gold'?700:420,h.kind==
 score=Math.max(0,score+pts);$('score').textContent=score;setCombo();
 if(pts>0){if(!goalHit&&score>=LV.g){goalHit=true;praise(3,x,y)}else if(h.kind==='gold')praise(4,x,y);else if(cmb===5)praise(0,x,y);else if(cmb===10)praise(1,x,y);else if(cmb===15)praise(2,x,y);else if(cmb>=20&&cmb%5===0)praise(Math.floor(Math.random()*4),x,y)}h.tm=setTimeout(function(){hide(h)},230)}
 else if(nearHole){if(cmb>0){cmb=0;setCombo()}snd(110,70,.12,'square',.08)}}
-/* داخل المرحلة تتسارع الحركة 20% تدريجيًا حتى نهاية الوقت */
-function prog(el){return Math.min(1,el/DUR)}
 /* السرعة: قيمة متصلة من 0.6× إلى 1.5× تضرب في مدة ظهور الشخصيات والفاصل بينها، وتُحفظ للمرة القادمة */
 var SMIN=.6,SMAX=1.5,SPD=1,spT=$('spdT'),spC=$('spdCol'),spTr=$('spdTr'),spF=$('spdFill'),spH=$('spdTh'),spV=$('spdV');
 try{var sv=parseFloat(localStorage.getItem('whack-speed2'));if(sv>=SMIN&&sv<=SMAX)SPD=sv}catch(e){}
@@ -411,8 +415,9 @@ timC.addEventListener('click',function(e){var o=e.target.closest('[data-s]');if(
 timT.onclick=function(){var o=timC.hidden;timC.hidden=!o;timT.setAttribute('aria-expanded',String(o))};
 document.addEventListener('pointerdown',function(e){if(!timC.hidden&&!e.target.closest('#tim')){timC.hidden=true;timT.setAttribute('aria-expanded','false')}});
 setTime(TDUR);
-function vis(el){return LV.vis*(1-.2*prog(el))/SPD}
-function gap(el){return LV.gap*(1-.2*prog(el))/SPD}
+/* سرعة المرحلة ثابتة طوال وقتها، وزر السرعة يضرب فيها لمن يريد أسرع أو أبطأ */
+function vis(el){return LV.vis/SPD}
+function gap(el){return LV.gap/SPD}
 function spawn(){if(!run)return;var el=(Date.now()-t0)/1000,free=H.filter(function(x){return!x.up&&!x.el.classList.contains('hit')});
 if(free.length){var h=free[Math.floor(Math.random()*free.length)],r=Math.random();var pb=el>3?LV.pb:0,pf=el>2?LV.pf:0;h.kind=r<pb?'bomb':r<pb+.1?'gold':r<pb+.1+pf/2?'cat':r<pb+.1+pf?'bunny':'mouse';h.up=true;h.el.classList.add('up');h.el.classList.toggle('isbomb',h.kind==='bomb');h.el.classList.toggle('gold',h.kind==='gold');h.el.classList.toggle('kcat',h.kind==='cat');h.el.classList.toggle('kbunny',h.kind==='bunny');
 h.tm=setTimeout(function(){if(h.up){if(h.kind==='mouse'&&cmb){cmb=0;setCombo()}hide(h)}},vis(el))}
@@ -423,8 +428,21 @@ function end(){run=false;pausedAt=0;clearInterval(tk);clearTimeout(sp);H.forEach
 var win=score>=LV.g;if(score>(SAVE.b[curL]||0))SAVE.b[curL]=score;if(win){SAVE.p=SAVE.p||{};SAVE.p[curL]=1}if(win)SAVE.u=Math.min(NL,Math.max(SAVE.u,curL+1));saveLv();mode=win?'win':'fail';
 $('oL').textContent='المرحلة '+curL;$('oT').textContent=win?(curL===NL?'أنهيت كل المراحل!':'أحسنت!'):'انتهى الوقت!';
 $('oB').innerHTML='<div class="big">'+score+'</div><p>'+(win?'نجحت في المرحلة '+curL:'الهدف '+LV.g+' نقطة')+'</p>';
-$('start').textContent='أعد المحاولة';$('start').hidden=win;$('wBtns').hidden=!win;over.hidden=false;if(win)starRain();snd(win?600:500,win?1200:150,.5,'triangle')}
-$('start').onclick=function(){if(mode==='win'){if(curL<NL)showReady(curL+1);else openHome(true)}else start()};
+$('start').textContent='أعد المحاولة';$('start').hidden=win;$('wBtns').hidden=!win;placeOver();over.hidden=false;if(win)starRain();snd(win?600:500,win?1200:150,.5,'triangle')}
+$('start').onclick=function(){if(mode==='win'){if(curL<NL)showReady(curL+1);else swap('levels')}else start()};
+/* زر الرجوع في الجوال والمتصفح: يرجع للواجهة السابقة بدل الخروج من التطبيق.
+   البداية ← المراحل ← اللعب؛ والرجوع أثناء اللعب يُنهي الجولة دون حفظ ويعود للواجهة التي جاء منها */
+var NAV=[''];
+function scr(){return (location.hash||'').replace('#','')}
+function go(h){NAV.push(h);location.hash=h}
+function swap(h){NAV[NAV.length-1]=h;location.replace('#'+h)}
+function back(h){if(NAV.length>1)history.back();else swap(h)}
+function abortRound(){if(!run)return;run=false;pausedAt=0;clearInterval(tk);clearTimeout(sp);H.forEach(hide);combo.classList.remove('on');mode='ready'}
+function render(){var h=scr();if(run&&h!=='play')abortRound();if(h==='levels')openHome(true);else if(h==='play'&&LV){closeHome();placeOver()}else openHome(false)}
+window.addEventListener('hashchange',function(){var h=scr();if(NAV.length>1&&NAV[NAV.length-2]===h)NAV.pop();else if(NAV[NAV.length-1]!==h)NAV.push(h);render()});
+if(scr())history.replaceState(null,'',location.pathname+location.search);
+function placeOver(){document.documentElement.style.setProperty('--ot',Math.max(0,bar.getBoundingClientRect().bottom)+'px')}
+window.addEventListener('resize',placeOver);window.addEventListener('scroll',placeOver,{passive:true});placeOver();
 /* إيقاف مؤقت عند مغادرة الصفحة: لا يضيع الوقت ولا تعمل المؤقتات في الخلفية، ويكمل اللعب عند الرجوع */
 document.addEventListener('visibilitychange',function(){if(document.hidden){if(run&&!pausedAt){pausedAt=Date.now();clearInterval(tk);clearTimeout(sp);H.forEach(hide)}}else if(run&&pausedAt){t0+=Date.now()-pausedAt;pausedAt=0;tk=setInterval(tick,100);sp=setTimeout(spawn,600)}});
 })();
