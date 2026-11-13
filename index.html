@@ -156,10 +156,14 @@ if(h.kind==='bomb'){pts=-5;cmb=0;snd(160,35,.45,'sawtooth',.25);board.classList.
 else{cmb++;pts=(h.kind==='gold'?5:1)*mult();snd(h.kind==='gold'?700:420,h.kind==='gold'?1500:900,.14,'triangle');burst(x,y,h.kind==='gold'?['#ffd34d','#fff','#ffb21f']:['#fff','#ffe27a','#ff8f80']);fx(null,'+'+pts,'t',x,y)}
 score=Math.max(0,score+pts);$('score').textContent=score;setCombo();h.tm=setTimeout(function(){hide(h)},230)}
 else{if(cmb>0){cmb=0;setCombo()}snd(110,70,.12,'square',.08)}}
+/* 30 مرحلة، مدة كل مرحلة 1.5 ثانية: المراحل 1-10 بطيئة وثابتة، ثم تتسارع تدريجيًا حتى المرحلة 30 */
+function prog(el){var st=Math.min(30,Math.floor(el/(DUR/30))+1);return st<=10?0:(st-10)/20}
+function vis(el){return 1300-850*prog(el)}
+function gap(el){return 900-620*prog(el)}
 function spawn(){if(!run)return;var el=(Date.now()-t0)/1000,free=H.filter(function(x){return!x.up&&!x.el.classList.contains('hit')});
 if(free.length){var h=free[Math.floor(Math.random()*free.length)],r=Math.random();h.kind=el>6&&r<.13?'bomb':el>4&&r<.24?'gold':'mouse';h.up=true;h.el.classList.add('up');h.el.classList.toggle('isbomb',h.kind==='bomb');h.el.classList.toggle('gold',h.kind==='gold');
-h.tm=setTimeout(function(){if(h.up){if(h.kind==='mouse'&&cmb){cmb=0;setCombo()}hide(h)}},Math.max(420,1050-el*14))}
-sp=setTimeout(spawn,Math.max(230,720-el*10)*(.7+Math.random()*.6))}
+h.tm=setTimeout(function(){if(h.up){if(h.kind==='mouse'&&cmb){cmb=0;setCombo()}hide(h)}},vis(el))}
+sp=setTimeout(spawn,gap(el)*(.7+Math.random()*.6))}
 function tick(){var left=Math.max(0,DUR-(Date.now()-t0)/1000);fill.style.transform='scaleX('+left/DUR+')';bar.classList.toggle('low',left<=8);if(left<=0)end()}
 function start(){H.forEach(hide);score=0;cmb=0;$('score').textContent=0;setCombo();over.hidden=true;run=true;t0=Date.now();tk=setInterval(tick,100);sp=setTimeout(spawn,500);snd(400,800,.2)}
 function end(){run=false;clearInterval(tk);clearTimeout(sp);H.forEach(hide);combo.classList.remove('on');var rec=score>best;if(rec){best=score;$('best').textContent=best;try{localStorage.setItem('whack-best-pro',best)}catch(e){}}
