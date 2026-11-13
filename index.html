@@ -21,9 +21,14 @@ background:radial-gradient(130% 38% at 15% 100%,var(--hill1) 60%,transparent 61%
 main{width:100%;max-width:480px;padding:14px 14px 26px;display:flex;flex-direction:column;gap:12px}
 .top{display:flex;align-items:center;gap:8px}
 h1{font:400 2rem/1 "Lalezar","Tajawal",sans-serif;margin:0;flex:1;color:#fff;-webkit-text-stroke:0;text-shadow:0 3px 0 #b3361a,0 6px 10px rgba(0,0,0,.25)}
-.chip{background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.5);border-radius:14px;padding:5px 12px;text-align:center;min-width:64px}
-.chip b{display:block;font:400 1.5rem/1.1 "Lalezar","Tajawal",sans-serif;font-variant-numeric:tabular-nums}
-.chip span{font-size:.72rem;opacity:.75}
+.stats{display:flex;gap:8px}
+.chip{flex:1;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.5);border-radius:14px;padding:6px 12px 8px;min-width:0}
+.chip .row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+.chip b{font:400 1.5rem/1.1 "Lalezar","Tajawal",sans-serif;font-variant-numeric:tabular-nums}
+.chip span{font-size:.85rem;font-weight:800;opacity:.8}
+.mb{height:8px;border-radius:6px;background:rgba(0,0,0,.2);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+.mb i{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:right center;transition:transform .25s ease;border-radius:6px;background:linear-gradient(#ff9a7a,var(--accent))}
+.mb.gold i{background:linear-gradient(#ffe27a,var(--gold))}
 .snd{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:var(--glass);font-size:1.2rem;cursor:pointer;color:var(--ink)}
 .snd:focus-visible,.go:focus-visible,.hole:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .bar{height:14px;border-radius:9px;background:rgba(0,0,0,.2);overflow:hidden;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
@@ -104,9 +109,11 @@ h1{font:400 2rem/1 "Lalezar","Tajawal",sans-serif;margin:0;flex:1;color:#fff;-we
 <main>
   <div class="top">
     <h1>اضرب الفأر</h1>
-    <div class="chip"><b id="score">0</b><span>النقاط</span></div>
-    <div class="chip"><b id="best">0</b><span>الأفضل</span></div>
     <button class="snd" id="snd" aria-label="الصوت">🔊</button>
+  </div>
+  <div class="stats">
+    <div class="chip"><div class="row"><span>النقاط</span><b id="score">0</b></div><div class="mb"><i id="scoreBar"></i></div></div>
+    <div class="chip"><div class="row"><span>الأفضل</span><b id="best">0</b></div><div class="mb gold"><i id="bestBar"></i></div></div>
   </div>
   <div class="bar" id="bar"><i id="fill"></i></div>
   <div class="board" id="board">
@@ -161,5 +168,6 @@ $('start').onclick=start;
 })();
 </script>
 <script>setTimeout(function(){var e=document.getElementById('splash');e.classList.add('done');setTimeout(function(){e.remove()},700)},5000)</script>
+<script>(function(){var sc=document.getElementById('score'),bs=document.getElementById('best'),sb=document.getElementById('scoreBar'),bb=document.getElementById('bestBar');function upd(){var a=+sc.textContent||0,b=+bs.textContent||0,m=Math.max(a,b,10);sb.style.transform='scaleX('+a/m+')';bb.style.transform='scaleX('+b/m+')'}var o=new MutationObserver(upd);[sc,bs].forEach(function(e){o.observe(e,{childList:true,characterData:true,subtree:true})});upd()})()</script>
 </body>
 </html>
